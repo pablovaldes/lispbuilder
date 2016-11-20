@@ -7,11 +7,11 @@
   `(block nil
      (unwind-protect
 	 (progn
-	   (if (= (netStartup) 0)
+	   (if (zerop netStartup)
                (progn
                  ,@body)
              (format t "startup failed~%"))
-           (unless (= (netCleanup) 0)
+           (unless (zerop netCleanup)
              (format t "cleanup failed~%"))))))
 
 (defparameter *server-socket* nil)
@@ -51,7 +51,7 @@
                 (let ((result (netWrite (socket c) *buffer* size)))
                   (cond ((= result (- NET_WOULD_BLOCK))
                          (loop-finish))
-                        ((>= result 0)
+                        (plusp result)
                          (incf (result-index c) result))
                         (t
                          (format t "write error~%")
@@ -93,7 +93,7 @@
       (setf *shutdown* t))
     (when (string= (page-name c) "/")
       (setf (page-name c) "index.html")))
-  (when (= (length (line c)) 0)
+  (when (zerop (length (line c)))
     (when (char= (elt (page-name c) 0) #\/)
       (setf (page-name c) (subseq (page-name c) 1)))
     (setf (page-name c) (merge-pathnames (page-name c) *htdocs*))
@@ -123,7 +123,7 @@
 
 (defmethod handle-read ((c connection))
   (let ((result (netRead (socket c) *buffer* *buffer-size*)))
-    (cond ((> result 0)
+    (cond (plusp result)
            (loop for i from 0 below result do
                  (let ((char (mem-aref *buffer* :char i)))
                    (cond ((= char 13)
@@ -135,7 +135,7 @@
                          (t
                           (setf (return-read c) nil)
                           (vector-push-extend (code-char char) (line c)))))))
-          ((= result 0)
+          (zerop result)
            (setf *socket-closed* t))
           ((= result NET_WOULD_BLOCK))
           (t (format t "read error: ~a~%" result)
@@ -145,7 +145,7 @@
   (with-foreign-objects ((socket-pointer ':int) (ip ':pointer))
     (setf (mem-ref ip :pointer) (null-pointer))
     (let ((result (netAccept *server-socket* ip socket-pointer)))
-      (cond ((= result 0)
+      (cond (zerop result)
              (let ((string (mem-ref ip :pointer)))
                (unless (null-pointer-p string)
                  (format t "incoming connection from ip: ~a~%" (foreign-string-to-lisp string))
