@@ -7,11 +7,11 @@
   `(block nil
      (unwind-protect
 	 (progn
-	   (if (= (netStartup) 0)
+	   (if (zerop netStartup)
                (progn
                  ,@body)
              (format t "startup failed~%"))
-           (unless (= (netCleanup) 0)
+           (unless (zerop netCleanup)
              (format t "cleanup failed~%"))))))
 
 (defparameter *sockets* nil)
@@ -25,10 +25,10 @@
 (defcallback on-read :void
     ((socket :int))
   (let ((result (netRead socket *buffer* *buffer-size*)))
-    (cond ((> result 0)
+    (cond ((plusp result)
            (loop for i from 0 below result do
                  (princ (code-char (mem-aref *buffer* :char i)))))
-          ((= result 0)
+          ((zerop result)
            (setf *socket-closed* t))
           (t (format t "read error: ~a~%" result)
              (setf *socket-closed* t)))))
